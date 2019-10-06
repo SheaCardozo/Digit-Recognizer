@@ -59,6 +59,8 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = (MediaQuery.of(context).size.height - kToolbarHeight - MediaQuery.of(context).padding.top);
+    final screenWidth = MediaQuery.of(context).size.width;
     // This method is rerun every time setState is called, for instance as done
     // by the _incrementCounter method above.
     //
@@ -71,9 +73,21 @@ class _MyHomePageState extends State<MyHomePage> {
         // the App.build method, and use it to set our appbar title.
         title: Text(widget.title),
       ),
-      body: Center(
+      body:
+      Column(
+        children: <Widget>[
+        Container(
+
+        alignment: Alignment.topCenter,
         // Center is a layout widget. It takes a single child and positions it
         // in the middle of the parent.
+
+        constraints: BoxConstraints.expand(
+          height: screenHeight * 0.8,
+        ),
+
+        color: Colors.red,
+
         child: Column(
           // Column is also a layout widget. It takes a list of children and
           // arranges them vertically. By default, it sizes itself to fit its
@@ -100,6 +114,36 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
           ],
         ),
+      ),
+        Row(
+          children: <Widget>[
+        Container(
+          alignment: Alignment.bottomLeft,
+          // Center is a layout widget. It takes a single child and positions it
+          // in the middle of the parent.
+
+          constraints: BoxConstraints.expand(
+            height: screenHeight * 0.2,
+            width: screenWidth/2,
+          ),
+
+          color: Colors.green,
+        ),
+        Container(
+          alignment: Alignment.bottomRight,
+          // Center is a layout widget. It takes a single child and positions it
+          // in the middle of the parent.
+
+          constraints: BoxConstraints.expand(
+            height: screenHeight * 0.2,
+            width: screenWidth/2,
+          ),
+
+          color: Colors.purple,
+        )
+        ]
+    ),
+      ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _incrementCounter,
