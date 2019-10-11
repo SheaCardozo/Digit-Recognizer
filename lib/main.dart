@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'dart:ui' as ui;
 import 'package:flutter/rendering.dart';
+import 'package:image/image.dart' as im;
 import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+
 
 void main() => runApp(MyApp());
 
@@ -24,6 +27,7 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.blue,
       ),
       home: MyHomePage(title: 'Draw your digit below!'),
+      debugShowCheckedModeBanner: false,
     );
   }
 }
@@ -54,17 +58,21 @@ class _MyHomePageState extends State<MyHomePage> {
   StrokeCap strokeCap = StrokeCap.butt;
   SelectedMode selectedMode = SelectedMode.StrokeWidth;
   GlobalKey _drawKey = GlobalKey();
-  ui.Image shot;
+  im.Image shot;
 
   void _captureDigit() async {
+
     RenderRepaintBoundary boundary = _drawKey.currentContext.findRenderObject();
-    shot = await boundary.toImage();
+    shot = im.decodePng((await (await boundary.toImage()).toByteData(format: ui.ImageByteFormat.png)).buffer.asUint8List());
+    shot = im.copyResize(shot, height: 28, width: 28, interpolation: im.Interpolation.linear);
+    shot = im.grayscale(shot);
   }
 
   void _clear() {
     setState(() {
       points.clear();
-    });  }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -82,86 +90,88 @@ class _MyHomePageState extends State<MyHomePage> {
       body:
       Column(
         children: <Widget>[
-        Container(
-        key: _drawKey,
-        alignment: Alignment.topCenter,
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
+          Container(
+            alignment: Alignment.topCenter,
+            // Center is a layout widget. It takes a single child and positions it
+            // in the middle of the parent.
+            color: Colors.white,
+            constraints: BoxConstraints.expand(
+              height: screenWidth,
+            ),
 
-        constraints: BoxConstraints.expand(
-          height: screenWidth,
-        ),
+            child: RepaintBoundary(
+              key: _drawKey,
+              child: GestureDetector(
+                behavior: HitTestBehavior.translucent,
 
-        child: GestureDetector(
-          behavior: HitTestBehavior.translucent,
-
-          onPanUpdate: (details) {
-            setState(() {
-              RenderBox rb = _drawKey.currentContext.findRenderObject();
-              points.add(DrawingPoints(
-                  points: rb.globalToLocal(details.globalPosition),
-                  paint: Paint()
-                    ..strokeCap = strokeCap
-                    ..isAntiAlias = true
-                    ..color = selectedColor.withOpacity(opacity)
-                    ..strokeWidth = strokeWidth));
-            });
-            _captureDigit();
-          },
-          onPanStart: (details) {
-            setState(() {
-              RenderBox rb = _drawKey.currentContext.findRenderObject();
-              points.add(DrawingPoints(
-                  points: rb.globalToLocal(details.globalPosition),
-                  paint: Paint()
-                    ..strokeCap = strokeCap
-                    ..isAntiAlias = true
-                    ..color = selectedColor.withOpacity(opacity)
-                    ..strokeWidth = strokeWidth));
-              _captureDigit();
-            });
-          },
-          onPanEnd: (details) {
-            setState(() {
-              points.add(null);
-              _captureDigit();
-            });
-          },
-          child: CustomPaint(
-            size: Size.square(screenWidth),
-            painter: DrawingPainter(
-              pointsList: points,
+                onPanUpdate: (details) {
+                  setState(() {
+                    RenderBox rb = _drawKey.currentContext.findRenderObject();
+                    points.add(DrawingPoints(
+                        points: rb.globalToLocal(details.globalPosition),
+                        paint: Paint()
+                          ..strokeCap = strokeCap
+                          ..isAntiAlias = true
+                          ..color = selectedColor.withOpacity(opacity)
+                          ..strokeWidth = strokeWidth));
+                  });
+                  _captureDigit();
+                },
+                onPanStart: (details) {
+                  setState(() {
+                    RenderBox rb = _drawKey.currentContext.findRenderObject();
+                    points.add(DrawingPoints(
+                        points: rb.globalToLocal(details.globalPosition),
+                        paint: Paint()
+                          ..strokeCap = strokeCap
+                          ..isAntiAlias = true
+                          ..color = selectedColor.withOpacity(opacity)
+                          ..strokeWidth = strokeWidth));
+                    _captureDigit();
+                  });
+                },
+                onPanEnd: (details) {
+                  setState(() {
+                    points.add(null);
+                    _captureDigit();
+                  });
+                },
+                child: CustomPaint(
+                  size: Size.square(screenWidth),
+                  painter: DrawingPainter(
+                    pointsList: points,
+                  ),
+                ),
+              ),
             ),
           ),
-        ),
-        ),
-        Row(
-          children: <Widget>[
-        Container(
-          alignment: Alignment.bottomLeft,
+          Row(
+              children: <Widget>[
+                Container(
+                  alignment: Alignment.bottomLeft,
 
-          constraints: BoxConstraints.expand(
-            height: screenHeight - screenWidth,
-            width: screenWidth/2,
+                  constraints: BoxConstraints.expand(
+                    height: screenHeight - screenWidth,
+                    width: screenWidth/2,
+                  ),
+
+                  color: Colors.green,
+                ),
+                Container(
+                  alignment: Alignment.bottomRight,
+                  // Center is a layout widget. It takes a single child and positions it
+                  // in the middle of the parent.
+
+                  constraints: BoxConstraints.expand(
+                    height: screenHeight - screenWidth,
+                    width: screenWidth/2,
+                  ),
+
+                  color: Colors.purple,
+                )
+              ]
           ),
-
-          color: Colors.green,
-        ),
-        Container(
-          alignment: Alignment.bottomRight,
-          // Center is a layout widget. It takes a single child and positions it
-          // in the middle of the parent.
-
-          constraints: BoxConstraints.expand(
-            height: screenHeight - screenWidth,
-            width: screenWidth/2,
-          ),
-
-          color: Colors.purple,
-        )
-        ]
-    ),
-      ],
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _clear,
