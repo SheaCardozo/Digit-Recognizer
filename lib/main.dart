@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'dart:ui' as ui;
 import 'package:flutter/rendering.dart';
 import 'package:image/image.dart' as im;
-import 'dart:io';
-import 'package:path_provider/path_provider.dart';
-
+import 'package:tflite/tflite.dart';
+import 'dart:typed_data';
 
 void main() => runApp(MyApp());
 
@@ -59,16 +58,56 @@ class _MyHomePageState extends State<MyHomePage> {
   SelectedMode selectedMode = SelectedMode.StrokeWidth;
   GlobalKey _drawKey = GlobalKey();
   im.Image shot;
+  String model;
+  var recognitions;
+
+
+
+  void _loadModel() async {
+    model = await Tflite.loadModel(
+        model: "Python/my_model.tflite",
+        labels: "Python/labels.txt",
+    );
+    print(model);
+  }
 
   void _captureDigit() async {
+    if (model == null) return;
 
     RenderRepaintBoundary boundary = _drawKey.currentContext.findRenderObject();
     shot = im.decodePng((await (await boundary.toImage()).toByteData(format: ui.ImageByteFormat.png)).buffer.asUint8List());
-    shot = im.copyResize(shot, height: 28, width: 28, interpolation: im.Interpolation.linear);
+    shot = im.copyResize(shot, height: INPUT_SIZE, width: INPUT_SIZE, interpolation: im.Interpolation.linear);
     shot = im.grayscale(shot);
+
+    var convertedBytes = Float32List(1 * INPUT_SIZE * INPUT_SIZE * 1);
+    var buffer = Float32List.view(convertedBytes.buffer);
+    bool empty = true;
+    int pixelIndex = 0;
+
+    for (var i = 0; i < INPUT_SIZE; i++) {
+      for (var j = 0; j < INPUT_SIZE; j++) {
+        var pixel = shot.getPixel(j, i);
+        buffer[pixelIndex] = (im.getAlpha(pixel)) / 255.0;
+        empty = empty && buffer[pixelIndex] == 0;
+        pixelIndex++;
+      }
+    }
+
+    if (empty){
+      recognitions = null;
+    } else {
+      recognitions = await Tflite.runModelOnBinary(
+          binary: convertedBytes.buffer.asUint8List(),
+          numResults: 2,
+          threshold: 0,
+          asynch: true
+      );
+    }
+    setState(() {});
   }
 
   void _clear() {
+    recognitions = null;
     setState(() {
       points.clear();
     });
@@ -80,6 +119,11 @@ class _MyHomePageState extends State<MyHomePage> {
     final screenWidth = MediaQuery.of(context).size.width;
     double strokeWidth = screenWidth * 20.0/420.0;
     double opacity = 1.0;
+
+    if (model == null){
+      _loadModel();
+      print(model);
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -115,7 +159,6 @@ class _MyHomePageState extends State<MyHomePage> {
                           ..color = selectedColor.withOpacity(opacity)
                           ..strokeWidth = strokeWidth));
                   });
-                  _captureDigit();
                 },
                 onPanStart: (details) {
                   setState(() {
@@ -127,14 +170,13 @@ class _MyHomePageState extends State<MyHomePage> {
                           ..isAntiAlias = true
                           ..color = selectedColor.withOpacity(opacity)
                           ..strokeWidth = strokeWidth));
-                    _captureDigit();
                   });
                 },
                 onPanEnd: (details) {
                   setState(() {
                     points.add(null);
-                    _captureDigit();
                   });
+                  _captureDigit();
                 },
                 child: CustomPaint(
                   size: Size.square(screenWidth),
@@ -155,7 +197,20 @@ class _MyHomePageState extends State<MyHomePage> {
                     width: screenWidth/2,
                   ),
 
-                  color: Colors.green,
+                  child: Container (
+                    alignment: Alignment.center,
+                    child: Column(
+                    children: <Widget> [
+                      Text(
+                        recognitions != null ? recognitions[0]['label'] : "",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: FONT_SIZE),
+                      ),
+                      Text("First Prediction", textAlign: TextAlign.center,),
+                    ]
+                  ),
+          ),
+                  color: Colors.blueGrey,
                 ),
                 Container(
                   alignment: Alignment.bottomRight,
@@ -167,7 +222,20 @@ class _MyHomePageState extends State<MyHomePage> {
                     width: screenWidth/2,
                   ),
 
-                  color: Colors.purple,
+                  child: Container (
+                    alignment: Alignment.center,
+                    child: Column(
+                      children: <Widget> [
+                        Text(
+                          recognitions != null ? recognitions[1]['label'] : "",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: FONT_SIZE),
+                        ),
+                        Text("Second Prediction", textAlign: TextAlign.center,),
+                      ]
+                  ),
+                ),
+                  color: Colors.grey,
                 )
               ]
           ),
@@ -177,7 +245,8 @@ class _MyHomePageState extends State<MyHomePage> {
         onPressed: _clear,
         tooltip: 'Clear',
         child: Icon(Icons.clear),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
 }
@@ -214,3 +283,6 @@ class DrawingPoints {
 }
 
 enum SelectedMode { StrokeWidth, Opacity, Color }
+
+const int INPUT_SIZE = 28;
+const double FONT_SIZE = 128;
