@@ -8,21 +8,12 @@ import 'dart:typed_data';
 void main() => runApp(MyApp());
 
 class MyApp extends StatelessWidget {
-  // This widget is the root of your application.
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Digit Recognizer',
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // Try running your application with "flutter run". You'll see the
-        // application has a blue toolbar. Then, without quitting the app, try
-        // changing the primarySwatch below to Colors.green and then invoke
-        // "hot reload" (press "r" in the console where you ran "flutter run",
-        // or simply save your changes to "hot reload" in a Flutter IDE).
-        // Notice that the counter didn't reset back to zero; the application
-        // is not restarted.
         primarySwatch: Colors.blue,
       ),
       home: MyHomePage(title: 'Draw your digit below!'),
@@ -34,15 +25,6 @@ class MyApp extends StatelessWidget {
 class MyHomePage extends StatefulWidget {
   MyHomePage({Key key, this.title}) : super(key: key);
 
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
   final String title;
 
   @override
@@ -53,13 +35,10 @@ class _MyHomePageState extends State<MyHomePage> {
   List<DrawingPoints> points = List();
   Color selectedColor = Colors.black;
   Color pickerColor = Colors.black;
-  bool showBottomList = false;
-  StrokeCap strokeCap = StrokeCap.butt;
-  SelectedMode selectedMode = SelectedMode.StrokeWidth;
   GlobalKey _drawKey = GlobalKey();
   im.Image shot;
   String model;
-  var recognitions;
+  var predictions;
 
 
 
@@ -72,6 +51,7 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void _captureDigit() async {
+
     if (model == null) return;
 
     RenderRepaintBoundary boundary = _drawKey.currentContext.findRenderObject();
@@ -84,8 +64,8 @@ class _MyHomePageState extends State<MyHomePage> {
     bool empty = true;
     int pixelIndex = 0;
 
-    for (var i = 0; i < INPUT_SIZE; i++) {
-      for (var j = 0; j < INPUT_SIZE; j++) {
+    for (int i = 0; i < INPUT_SIZE; i++) {
+      for (int j = 0; j < INPUT_SIZE; j++) {
         var pixel = shot.getPixel(j, i);
         buffer[pixelIndex] = (im.getAlpha(pixel)) / 255.0;
         empty = empty && buffer[pixelIndex] == 0;
@@ -94,9 +74,9 @@ class _MyHomePageState extends State<MyHomePage> {
     }
 
     if (empty){
-      recognitions = null;
+      predictions = null;
     } else {
-      recognitions = await Tflite.runModelOnBinary(
+      predictions = await Tflite.runModelOnBinary(
           binary: convertedBytes.buffer.asUint8List(),
           numResults: 2,
           threshold: 0,
@@ -107,7 +87,7 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void _clear() {
-    recognitions = null;
+    predictions = null;
     setState(() {
       points.clear();
     });
@@ -117,18 +97,16 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget build(BuildContext context) {
     final screenHeight = (MediaQuery.of(context).size.height - kToolbarHeight - MediaQuery.of(context).padding.top);
     final screenWidth = MediaQuery.of(context).size.width;
-    double strokeWidth = screenWidth * 20.0/420.0;
-    double opacity = 1.0;
+    final fontSize = 2*(screenHeight - screenWidth)/3;
+    final smallFont = (screenHeight - screenWidth)/20;
+    final strokeWidth = screenWidth * 20.0/420.0;
 
     if (model == null){
       _loadModel();
-      print(model);
     }
 
     return Scaffold(
       appBar: AppBar(
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
         title: Text(widget.title),
       ),
       body:
@@ -136,8 +114,7 @@ class _MyHomePageState extends State<MyHomePage> {
         children: <Widget>[
           Container(
             alignment: Alignment.topCenter,
-            // Center is a layout widget. It takes a single child and positions it
-            // in the middle of the parent.
+
             color: Colors.white,
             constraints: BoxConstraints.expand(
               height: screenWidth,
@@ -154,9 +131,8 @@ class _MyHomePageState extends State<MyHomePage> {
                     points.add(DrawingPoints(
                         points: rb.globalToLocal(details.globalPosition),
                         paint: Paint()
-                          ..strokeCap = strokeCap
                           ..isAntiAlias = true
-                          ..color = selectedColor.withOpacity(opacity)
+                          ..color = selectedColor
                           ..strokeWidth = strokeWidth));
                   });
                 },
@@ -166,16 +142,13 @@ class _MyHomePageState extends State<MyHomePage> {
                     points.add(DrawingPoints(
                         points: rb.globalToLocal(details.globalPosition),
                         paint: Paint()
-                          ..strokeCap = strokeCap
                           ..isAntiAlias = true
-                          ..color = selectedColor.withOpacity(opacity)
+                          ..color = selectedColor
                           ..strokeWidth = strokeWidth));
                   });
                 },
                 onPanEnd: (details) {
-                  setState(() {
-                    points.add(null);
-                  });
+                  points.add(null);
                   _captureDigit();
                 },
                 child: CustomPaint(
@@ -198,15 +171,15 @@ class _MyHomePageState extends State<MyHomePage> {
                   ),
 
                   child: Container (
-                    alignment: Alignment.center,
+                    alignment: Alignment.bottomCenter,
                     child: Column(
                     children: <Widget> [
                       Text(
-                        recognitions != null ? recognitions[0]['label'] : "",
+                        predictions != null ? predictions[0]['label'] : "",
                         textAlign: TextAlign.center,
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: FONT_SIZE),
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: fontSize),
                       ),
-                      Text("First Prediction", textAlign: TextAlign.center,),
+                      Text("First Prediction", textAlign: TextAlign.center, style: TextStyle(fontSize: smallFont)),
                     ]
                   ),
           ),
@@ -214,8 +187,6 @@ class _MyHomePageState extends State<MyHomePage> {
                 ),
                 Container(
                   alignment: Alignment.bottomRight,
-                  // Center is a layout widget. It takes a single child and positions it
-                  // in the middle of the parent.
 
                   constraints: BoxConstraints.expand(
                     height: screenHeight - screenWidth,
@@ -223,15 +194,15 @@ class _MyHomePageState extends State<MyHomePage> {
                   ),
 
                   child: Container (
-                    alignment: Alignment.center,
+                    alignment: Alignment.bottomCenter,
                     child: Column(
                       children: <Widget> [
                         Text(
-                          recognitions != null ? recognitions[1]['label'] : "",
+                          predictions != null ? predictions[1]['label'] : "",
                           textAlign: TextAlign.center,
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: FONT_SIZE),
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: fontSize),
                         ),
-                        Text("Second Prediction", textAlign: TextAlign.center,),
+                        Text("Second Prediction", textAlign: TextAlign.center, style: TextStyle(fontSize: smallFont)),
                       ]
                   ),
                 ),
@@ -279,10 +250,7 @@ class DrawingPainter extends CustomPainter {
 class DrawingPoints {
   Paint paint;
   Offset points;
+
   DrawingPoints({this.points, this.paint});
 }
-
-enum SelectedMode { StrokeWidth, Opacity, Color }
-
-const int INPUT_SIZE = 28;
-const double FONT_SIZE = 128;
+const INPUT_SIZE = 28;
