@@ -1,4 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    android:versionCode="1.0.0"
+    android:versionName="Release"
     package="sacardozo.digit_recognizer">
 
     <!-- io.flutter.app.FlutterApplication is an android.app.Application that
@@ -8,7 +10,7 @@
          FlutterApplication and put your custom class here. -->
     <application
         android:name="io.flutter.app.FlutterApplication"
-        android:label="digit_recognizer"
+        android:label="Digit Recognizer CNN"
         android:icon="@mipmap/ic_launcher">
         <activity
             android:name=".MainActivity"

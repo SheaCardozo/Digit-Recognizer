@@ -44,7 +44,6 @@ class _MyHomePageState extends State<MyHomePage> {
         model: "Python/my_model.tflite",
         labels: "Python/labels.txt",
     );
-    print(model);
   }
 
   void _captureDigit() async {
