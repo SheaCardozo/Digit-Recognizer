@@ -34,13 +34,10 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   List<DrawingPoints> points = List();
   Color selectedColor = Colors.black;
-  Color pickerColor = Colors.black;
-  GlobalKey _drawKey = GlobalKey();
   im.Image shot;
   String model;
+  var _drawKey = GlobalKey();
   var predictions;
-
-
 
   void _loadModel() async {
     model = await Tflite.loadModel(
