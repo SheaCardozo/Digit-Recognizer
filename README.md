@@ -22,4 +22,4 @@ It's architecture consists of:
 
 Each layer uses RELU activation (with the exception of the output layer that uses softmax activation), and batch normalization is employed inbetween each layer.
 
-The Android application was created using Google's Flutter UI toolkit in the DART programming language with the model deployed using Tensflow Lite. It consists of a square drawing pad that captures an image of the drawing on every stroke end, which is then downscaled to a 28x28 image and passed to the model. The model then returns it's most likely and second most likely predictions which are then displayed.
+The Android application was created using Google's Flutter UI toolkit in the DART programming language with the model deployed using Tensorflow Lite. It consists of a square drawing pad that captures an image of the drawing on every stroke end, which is then downscaled to a 28x28 image and passed to the model. The model then returns it's most likely and second most likely predictions which are then displayed.
